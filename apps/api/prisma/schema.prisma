@@ -11,3 +11,157 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum StoreRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id       String   @id @default(cuid())
+  name     String
+  email    String   @unique
+  password String
+  role     UserRole @default(USER)
+
+  memberships StoreMember[]
+  orders      Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Store {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+
+  members    StoreMember[]
+  categories Category[]
+  products   Product[]
+  orders     Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoreMember {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  role StoreRole @default(STAFF)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId])
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  price       Decimal @db.Decimal(12, 2)
+  isActive    Boolean @default(true)
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  inventory Inventory?
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, slug])
+  @@index([storeId])
+  @@index([categoryId])
+}
+
+model Inventory {
+  id       String @id @default(cuid())
+  quantity Int    @default(0)
+
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id     String      @id @default(cuid())
+  status OrderStatus @default(PENDING)
+  total  Decimal     @db.Decimal(12, 2)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id])
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([status])
+}
+
+model OrderItem {
+  id       String  @id @default(cuid())
+  quantity Int
+  price    Decimal @db.Decimal(12, 2)
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}

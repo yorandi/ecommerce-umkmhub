@@ -99,6 +99,32 @@ Check out a few resources that may come in handy when working with NestJS:
 - To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
 - Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
 
+## Auth API
+
+Semua endpoint memakai prefix `/api`. Atur `DATABASE_URL` dan `JWT_SECRET` di environment API.
+
+| Endpoint | Status sukses | Respons |
+| --- | --- | --- |
+| `POST /api/auth/register` | 201 | `{ message, user }` |
+| `POST /api/auth/login` | 200 | `{ accessToken, user }` |
+| `GET /api/auth/me` | 200 | Objek user, dengan header `Authorization: Bearer <accessToken>` |
+
+Objek user selalu berisi `id`, `name`, `email`, `role`, dan `createdAt`, tanpa password. `/auth/me` sekarang menggunakan `id`, menggantikan `userId`. JWT berlaku selama 15 menit; profil dan role dibaca ulang dari database pada setiap request terautentikasi. Token milik user yang sudah dihapus ditolak.
+
+Registrasi menerima `name`, `email`, dan `password`; login hanya menerima `email` dan `password`. Password minimal 8 karakter dan maksimal 72 byte UTF-8 (bukan 72 karakter). Password tidak dipotong atau di-trim. Nama di-trim dan tidak boleh kosong. Field tambahan ditolak dengan 400. Email duplikat menghasilkan 409; kredensial atau token tidak valid menghasilkan 401.
+
+Login dan registrasi masing-masing dibatasi 10 request per menit per IP; request berikutnya menghasilkan 429. Pembatasan memakai memori satu proses, sesuai mekanisme [NestJS Throttler](https://docs.nestjs.com/security/rate-limiting). Deployment beberapa instance memerlukan storage pembatasan bersama; deployment di balik proxy perlu konfigurasi proxy tepercaya sesuai infrastrukturnya.
+
+Dari root monorepo:
+
+```bash
+pnpm --filter api test
+pnpm --filter api test:e2e
+pnpm --filter api build
+```
+
+Test HTTP menggunakan aplikasi Nest, validasi, JWT, dan guard asli dengan database mock; test ini tidak memverifikasi koneksi atau migrasi PostgreSQL.
+
 ## Support
 
 Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).

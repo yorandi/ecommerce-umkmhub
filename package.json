@@ -4,6 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start:dev": "pnpm --filter api start:dev",
+    "lint": "pnpm --filter api lint",
+    "lint:fix": "pnpm --filter api lint:fix",
+    "format": "pnpm --filter api format",
+    "format:check": "pnpm --filter api format:check",
+    "check": "pnpm lint && pnpm format:check",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +22,6 @@
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.4.1",
-  "type": "module"
+  "packageManager": "pnpm@12.4.1"
+
 }
