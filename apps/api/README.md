@@ -1,140 +1,124 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# UMKMHub API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API NestJS untuk autentikasi pengguna dan pembuatan toko. Panduan instalasi,
+environment, database, dan menjalankan server ada di
+[README utama](../../README.md).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Base URL lokal: `http://localhost:3000/api`, dengan port mengikuti `PORT`.
+Gunakan `Content-Type: application/json` untuk request dengan body JSON.
 
-## Description
+## Registrasi
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+`POST /api/auth/register`
 
-## Project setup
-
-```bash
-$ pnpm install
+```json
+{
+  "name": "Budi",
+  "email": "budi@example.com",
+  "password": "contohPassword123"
+}
 ```
 
-## Compile and run the project
+Respons sukses: **201**, berisi `{ message, user }`. Profil `user` berisi `id`,
+`name`, `email`, `role`, dan `createdAt`, tanpa password.
 
-```bash
-# development
-$ pnpm run start
+- Nama di-trim dan tidak boleh kosong.
+- Email harus valid dan belum terdaftar.
+- Password minimal 8 karakter dan maksimal 72 byte UTF-8. Password tidak di-trim.
+- Role pengguna baru ditentukan server sebagai `USER`.
 
-# watch mode
-$ pnpm run start:dev
+## Login
 
-# production mode
-$ pnpm run start:prod
+`POST /api/auth/login`
+
+```json
+{
+  "email": "budi@example.com",
+  "password": "contohPassword123"
+}
 ```
 
-## Run tests
+Respons sukses: **200**, berisi `{ accessToken, user }`. Gunakan nilai `accessToken`
+untuk request berikutnya. Token berlaku selama 15 menit.
 
-```bash
-# unit tests
-$ pnpm run test
+Registrasi dan login masing-masing dibatasi 10 request per menit per IP, memakai
+penyimpanan rate limit dalam memori proses.
 
-# e2e tests
-$ pnpm run test:e2e
+## Profil pengguna
 
-# test coverage
-$ pnpm run test:cov
+`GET /api/auth/me`
+
+```http
+Authorization: Bearer <accessToken>
 ```
 
-## Deployment
+Respons sukses: **200**, berisi `id`, `userId`, `name`, `email`, `role`, dan
+`createdAt`. `userId` sama dengan `id`. Password tidak disertakan.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+JWT strategy membaca ulang pengguna dari database pada setiap request, sehingga
+perubahan role langsung berlaku. Token milik pengguna yang telah dihapus ditolak.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Membuat toko
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+`POST /api/stores`
+
+```http
+Authorization: Bearer <accessToken>
+Content-Type: application/json
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+```json
+{
+  "name": "Toko Budi",
+  "description": "Produk kebutuhan sehari-hari"
+}
+```
 
-## Observability
+Respons sukses: **201**, berisi object toko yang dibuat, termasuk `id`, `name`,
+`slug`, `description`, `createdAt`, dan `updatedAt`.
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+- `name` wajib, panjang 3–10 karakter.
+- `description` opsional, maksimal 500 karakter.
+- Slug dibuat server dari nama toko dan harus unik.
+- Pengguna yang terautentikasi otomatis menjadi anggota toko dengan role `OWNER`.
+- Pembuatan toko dan keanggotaan dilakukan dalam satu transaksi database.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+Tidak perlu mengirim `userId`, `slug`, atau `role` dalam body request.
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+## Respons error
 
-## Resources
+| Status | Kondisi                                                                           |
+| ------ | --------------------------------------------------------------------------------- |
+| 400    | Body gagal validasi atau mengandung field yang tidak diizinkan                    |
+| 401    | Kredensial salah, token hilang/invalid/kedaluwarsa, atau pengguna tidak ditemukan |
+| 409    | Email sudah terdaftar atau slug toko ditemukan saat pengecekan duplikat           |
+| 429    | Batas request registrasi/login terlampaui                                         |
+| 500    | Error server yang belum ditangani; lihat log terminal API                         |
 
-Check out a few resources that may come in handy when working with NestJS:
+## Alur autentikasi di source
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+1. Login menandatangani JWT dengan `sub` berisi ID pengguna.
+2. `JwtAuthGuard` memvalidasi bearer token melalui `JwtStrategy`.
+3. Strategy mengambil profil database dan menambahkan `userId: user.id`.
+4. Hasilnya bertipe `JwtUser` dan tersedia melalui `@CurrentUser()`.
+5. `StoresController` meneruskan `user.userId` ke service untuk membuat anggota
+   toko dengan role `OWNER`.
 
-## Auth API
+`JwtUser` mengikuti profil aman `AuthUser` dan menambahkan `userId`. Jika bentuk
+data autentikasi berubah, selaraskan type, hasil `validate()`, controller, dan
+test HTTP.
 
-Semua endpoint memakai prefix `/api`. Atur `DATABASE_URL` dan `JWT_SECRET` di environment API.
+## Verifikasi
 
-| Endpoint | Status sukses | Respons |
-| --- | --- | --- |
-| `POST /api/auth/register` | 201 | `{ message, user }` |
-| `POST /api/auth/login` | 200 | `{ accessToken, user }` |
-| `GET /api/auth/me` | 200 | Objek user, dengan header `Authorization: Bearer <accessToken>` |
-
-Objek user selalu berisi `id`, `name`, `email`, `role`, dan `createdAt`, tanpa password. `/auth/me` sekarang menggunakan `id`, menggantikan `userId`. JWT berlaku selama 15 menit; profil dan role dibaca ulang dari database pada setiap request terautentikasi. Token milik user yang sudah dihapus ditolak.
-
-Registrasi menerima `name`, `email`, dan `password`; login hanya menerima `email` dan `password`. Password minimal 8 karakter dan maksimal 72 byte UTF-8 (bukan 72 karakter). Password tidak dipotong atau di-trim. Nama di-trim dan tidak boleh kosong. Field tambahan ditolak dengan 400. Email duplikat menghasilkan 409; kredensial atau token tidak valid menghasilkan 401.
-
-Login dan registrasi masing-masing dibatasi 10 request per menit per IP; request berikutnya menghasilkan 429. Pembatasan memakai memori satu proses, sesuai mekanisme [NestJS Throttler](https://docs.nestjs.com/security/rate-limiting). Deployment beberapa instance memerlukan storage pembatasan bersama; deployment di balik proxy perlu konfigurasi proxy tepercaya sesuai infrastrukturnya.
-
-Dari root monorepo:
+Jalankan dari root repository:
 
 ```bash
-pnpm --filter api test
-pnpm --filter api test:e2e
 pnpm --filter api build
+pnpm --filter api test:e2e
+pnpm check
 ```
 
-Test HTTP menggunakan aplikasi Nest, validasi, JWT, dan guard asli dengan database mock; test ini tidak memverifikasi koneksi atau migrasi PostgreSQL.
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Test HTTP mencakup registrasi, login, profil, pembuatan toko, penolakan token,
+validasi input, dan rate limit. Prisma di-mock; untuk memeriksa integrasi database,
+jalankan API dengan PostgreSQL lokal dan coba request melalui Postman atau client
+HTTP lain.
